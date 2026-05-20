@@ -67,11 +67,17 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       final xmlText = await downloadXmlFromServer(widget.feed.feedUrl);
       final parsedArticles = parseRssArticles(xmlText);
 
-      final String siteUrl = parsedArticles.isNotEmpty
-          ? (parsedArticles.first['feedSiteUrl'] ?? widget.feed.siteUrl)
+      // 提取解析到的新值
+      final String? parsedSite = parsedArticles.isNotEmpty ? parsedArticles.first['feedSiteUrl'] : null;
+      final String? parsedIcon = parsedArticles.isNotEmpty ? parsedArticles.first['feedIconUrl'] : null;
+
+      // 如果有解析到有效字段就用新值覆盖，没有解析到就严格保留原本的现有值
+      final String siteUrl = (parsedSite != null && parsedSite.trim().isNotEmpty)
+          ? parsedSite
           : widget.feed.siteUrl;
-      final String iconUrl = parsedArticles.isNotEmpty
-          ? (parsedArticles.first['feedIconUrl'] ?? widget.feed.iconUrl)
+
+      final String iconUrl = (parsedIcon != null && parsedIcon.trim().isNotEmpty)
+          ? parsedIcon
           : widget.feed.iconUrl;
 
       for (var item in parsedArticles) {
