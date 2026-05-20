@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // 引入缓存图片库
 import 'package:rss/view/reader.dart';
 import 'package:rss/widget.dart';
 import 'package:url_launcher/url_launcher.dart'; // 用于外部浏览器打开链接
@@ -275,36 +276,29 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // 比例缩放不失真的图片组件
+                          // 具备断网本地缓存能力的图片组件
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
-                            child: Image.network(
-                              article.enclosure,
+                            child: CachedNetworkImage(
+                              imageUrl: article.enclosure,
                               width: imageWidth,
                               height: imageHeight,
-                              fit: BoxFit.cover, // 核心：保持原图比例裁剪缩放，不拉伸变形
+                              fit: BoxFit.cover, // 保持原图比例裁剪缩放，不变形
                               alignment: Alignment.center,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Container(
-                                  width: imageWidth,
-                                  height: imageHeight,
-                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                  alignment: Alignment.center,
-                                  child: SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 1.5,
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                          loadingProgress.expectedTotalBytes!
-                                          : null,
-                                    ),
+                              placeholder: (context, url) => Container(
+                                width: imageWidth,
+                                height: imageHeight,
+                                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                alignment: Alignment.center,
+                                child: const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.5,
                                   ),
-                                );
-                              },
-                              errorBuilder: (_, __, ___) => Container(
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
                                 width: imageWidth,
                                 height: imageHeight,
                                 color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
