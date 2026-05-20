@@ -197,7 +197,6 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.feed.title),
-        actions: [IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: () {})],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -307,7 +306,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    article.author.isNotEmpty ? '作者: ${article.author}' : '',
+                                    article.author.isNotEmpty ? article.author : '',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(fontSize: 11, color: colorScheme.outline),
