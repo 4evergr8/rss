@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
 
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'RSSqlite',
+      title: 'RSSQlite3',
       theme: brightness == Brightness.light ? theme.light() : theme.dark(),
       home: const HomeScreen(),
     );
