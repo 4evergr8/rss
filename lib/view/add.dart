@@ -11,6 +11,7 @@ import 'package:rss/database.dart';
 import 'package:rss/service/download.dart';
 import 'package:rss/service/rss.dart';
 import 'package:rss/widget.dart';
+import 'package:xml/xml.dart' as xml;
 
 // 全局数据库实例引用
 final _db = AppDatabase();
@@ -80,11 +81,15 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
     }
   }
 
-  // 新增：点击“导入 OPML 文件”触发的函数
+
+// 修改后：使用标准 xml 库以及新版 file_picker 调用的导入函数
   Future<void> _importOpmlFile() async {
     try {
-      // 1. 让用户选择本地文件
-      final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['opml', 'xml']);
+      // 1. 新版 FilePicker 直接调用静态方法
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['opml', 'xml'],
+      );
 
       if (result == null || result.files.single.path == null) {
         return; // 用户取消了选择
@@ -98,28 +103,29 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
         final file = File(result.files.single.path!);
         final xmlText = await file.readAsString(encoding: utf8);
 
-        // 3. 解析 XML 大纲树
-        final document = html_parser.parse(xmlText);
-        final bodyText = document.querySelector('body');
-        if (bodyText == null) {
+        // 3. 使用标准 XML 库解析大纲树
+        final document = xml.XmlDocument.parse(xmlText);
+        final bodyNode = document.findAllElements('body').firstOrNull;
+
+        if (bodyNode == null) {
           throw Exception('未找到有效的 OPML body 节点');
         }
 
-        // 4. 递归遍历所有 outline 节点
+        // 4. 递归遍历所有 xml 节点
         final List<FeedsCompanion> feedsToInsert = [];
-        _parseOutlineNodes(bodyText.children, '', feedsToInsert);
+        _parseOutlineNodes(bodyNode.children, '', feedsToInsert);
 
         if (feedsToInsert.isEmpty) {
           throw Exception('未在文件中找到任何可导入的订阅源');
         }
 
-        // 5. 利用 Drift 的 batch 工具单事务批量写入数据库（高效、不卡顿）
+        // 5. 利用 Drift 的 batch 工具单事务批量写入数据库
         await _db.batch((batch) {
           for (final feed in feedsToInsert) {
             batch.insert(
               _db.feeds,
               feed,
-              mode: drift.InsertMode.insertOrReplace, // 冲突时覆盖更新
+              mode: drift.InsertMode.insertOrReplace,
             );
           }
         });
@@ -128,7 +134,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('成功导入 $importCount 个订阅源！')));
-          Navigator.of(context).pop(); // 导入成功后关闭页面
+          Navigator.of(context).pop();
         }
       } catch (error) {
         showErrorSnackBarGlobal('解析或导入失败: $error');
@@ -140,16 +146,19 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
     }
   }
 
-  // 新增：递归解析大纲节点的辅助函数
-  void _parseOutlineNodes(List<dom.Element> elements, String currentCategory, List<FeedsCompanion> resultList) {
-    for (final element in elements) {
-      if (element.localName == 'outline') {
-        final xmlUrl = element.attributes['xmlUrl']?.trim();
-        final textAttr = element.attributes['text']?.trim();
-        final titleAttr = element.attributes['title']?.trim();
-        final htmlUrl = element.attributes['htmlUrl']?.trim() ?? '';
+  // 修改后：配合 xml 库进行递归解析的辅助函数
+  void _parseOutlineNodes(Iterable<xml.XmlNode> nodes, String currentCategory, List<FeedsCompanion> resultList) {
+    for (final node in nodes) {
+      // 过滤掉空白文本换行节点，只处理标准的元素标签
+      if (node is xml.XmlElement && node.name.local == 'outline') {
+        final xmlUrl = node.getAttribute('xmlUrl')?.trim();
+        final textAttr = node.getAttribute('text')?.trim();
+        final titleAttr = node.getAttribute('title')?.trim();
+        final htmlUrl = node.getAttribute('htmlUrl')?.trim() ?? '';
 
-        final String displayName = (textAttr != null && textAttr.isNotEmpty) ? textAttr : (titleAttr ?? '未命名订阅源');
+        final String displayName = (textAttr != null && textAttr.isNotEmpty)
+            ? textAttr
+            : (titleAttr ?? '未命名订阅源');
 
         if (xmlUrl != null && xmlUrl.isNotEmpty) {
           // 叶子节点：这是一个具体的订阅源
@@ -159,27 +168,20 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
               siteUrl: drift.Value(htmlUrl),
               title: drift.Value(displayName),
               category: drift.Value(currentCategory),
-              // 继承父级目录的分组名
               iconUrl: const drift.Value(''),
               lastUpdated: const drift.Value('0'),
-              displayMode: drift.Value(_selectedDisplayMode), // 继承当前选择的显示模式
+              displayMode: drift.Value(_selectedDisplayMode),
             ),
           );
         } else {
-          // 分类节点：没有链接，说明它是一个文件夹。向下递归，并将当前节点的名称作为子节点的分组名
-          if (element.children.isNotEmpty) {
-            _parseOutlineNodes(element.children, displayName, resultList);
+          // 分类节点：向下递归，并将当前节点的名称作为子节点的分组名
+          if (node.children.isNotEmpty) {
+            _parseOutlineNodes(node.children, displayName, resultList);
           }
-        }
-      } else {
-        // 如果遇到了其它中间层级节点，继续向下探查
-        if (element.children.isNotEmpty) {
-          _parseOutlineNodes(element.children, currentCategory, resultList);
         }
       }
     }
   }
-
   // 点击最下方“保存”按钮触发的函数
   Future<void> _saveToDatabase() async {
     final cancelLoading = await showLoadingDialogGlobal();
