@@ -10,28 +10,28 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: any
-  drift: any
-  sqlite3_flutter_libs: any
-  path_provider: any
-  url_launcher: any
-  collection: any
-  flutter_widget_from_html: any
-  cached_network_image: any
-  file_picker: ^8.1.7
-  path: any
-  google_fonts: any
-  xml: any
+  cupertino_icons: ^1.0.9
+  drift: ^2.33.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  path_provider: ^2.1.5
+  url_launcher: ^6.3.2
+  collection: ^1.19.1
+  flutter_widget_from_html: ^0.17.2
+  cached_network_image: ^3.4.1
+  file_picker: ^11.0.2
+  path: ^1.9.1
+  google_fonts: ^8.1.0
+  xml: ^6.6.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: any
+  flutter_lints: ^6.0.0
 
   # Drift 专属的代码生成器
-  drift_dev: any
+  drift_dev: ^2.33.0
   # 统一的代码生成自动化工具
-  build_runner: any
+  build_runner: ^2.15.0
 
 flutter:
   uses-material-design: true
