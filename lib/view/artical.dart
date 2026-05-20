@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
+import 'package:rss/view/reader.dart';
 import 'package:rss/widget.dart';
 import 'package:url_launcher/url_launcher.dart'; // 用于外部浏览器打开链接
+
 import '../database.dart';
 
 final _db = AppDatabase();
@@ -81,8 +83,9 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   Future<void> _handleArticleTap(Article article) async {
     // 1. 先在本地数据库将这篇文章修改、标记为已读
     try {
-      await (_db.update(_db.articles)..where((tbl) => tbl.guid.equals(article.guid)))
-          .write(const ArticlesCompanion(isRead: drift.Value('true')));
+      await (_db.update(
+        _db.articles,
+      )..where((tbl) => tbl.guid.equals(article.guid))).write(const ArticlesCompanion(isRead: drift.Value('true')));
     } catch (e) {
       debugPrint('标记已读失败: $e');
     }
@@ -104,18 +107,16 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       if (!mounted) return;
       final currentIndex = _articles.indexOf(article);
 
-
-
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => ReaderScreen(
-            allArticles: _articles,  // 传递当前视图下的文章静态快照
+            allArticles: _articles, // 传递当前视图下的文章静态快照
             initialIndex: currentIndex, // 传递当前点击的位置
           ),
         ),
       );
 
-// 从阅读页返回后，外层列表重新刷新，刚才读过的文章就会自动消失（未读页）或变灰（全部页）
+      // 从阅读页返回后，外层列表重新刷新，刚才读过的文章就会自动消失（未读页）或变灰（全部页）
       _loadArticles();
     }
   }
@@ -143,90 +144,83 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           : _articles.isEmpty
           ? const Center(child: Text('当前分类下没有文章'))
           : ListView.separated(
-        itemCount: _articles.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final article = _articles[index];
-          final summary = _getSummary(article.description, article.content);
-          final dateText = _formatTimestamp(article.date);
+              itemCount: _articles.length,
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final article = _articles[index];
+                final summary = _getSummary(article.description, article.content);
+                final dateText = _formatTimestamp(article.date);
 
-          return InkWell(
-            onTap: () => _handleArticleTap(article),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 标题
-                  Text(
-                    article.title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      // 如果是未读，字体颜色加深；已读则变浅灰色灰化
-                      color: article.isRead == 'false' ? colorScheme.onSurface : colorScheme.onSurface.withValues(),
+                return InkWell(
+                  onTap: () => _handleArticleTap(article),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 标题
+                        Text(
+                          article.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            // 如果是未读，字体颜色加深；已读则变浅灰色灰化
+                            color: article.isRead == 'false'
+                                ? colorScheme.onSurface
+                                : colorScheme.onSurface.withValues(),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // 描述/摘要
+                        Text(
+                          summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: colorScheme.onSurfaceVariant.withOpacity(article.isRead == 'false' ? 1.0 : 0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // enclosure 插图（如果链接不为空，则用网络组件加载显示，没有就不占位）
+                        if (article.enclosure.isNotEmpty) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              article.enclosure,
+                              cacheHeight: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const SizedBox.shrink(), // 加载失败也不破坏布局
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        // 日期和作者
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              article.author.isNotEmpty ? '作者: ${article.author}' : '',
+                              style: TextStyle(fontSize: 11, color: colorScheme.outline),
+                            ),
+                            Text(dateText, style: TextStyle(fontSize: 11, color: colorScheme.outline)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 6),
-
-                  // 描述/摘要
-                  Text(
-                    summary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colorScheme.onSurfaceVariant.withOpacity(article.isRead == 'false' ? 1.0 : 0.5),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // enclosure 插图（如果链接不为空，则用网络组件加载显示，没有就不占位）
-                  if (article.enclosure.isNotEmpty) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: Image.network(
-                        article.enclosure,
-                        cacheHeight: 160,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(), // 加载失败也不破坏布局
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // 日期和作者
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        article.author.isNotEmpty ? '作者: ${article.author}' : '',
-                        style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                      ),
-                      Text(
-                        dateText,
-                        style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
       // 底部专属切换栏：未读/全部
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.blur_on),
-            label: '未读内容',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.blur_circular),
-            label: '全部内容',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.blur_on), label: '未读内容'),
+          BottomNavigationBarItem(icon: Icon(Icons.blur_circular), label: '全部内容'),
         ],
         currentIndex: _currentSubIndex,
         selectedItemColor: colorScheme.primary,
@@ -241,4 +235,3 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     );
   }
 }
-
