@@ -4,6 +4,8 @@ import 'package:rss/view/reader.dart';
 import 'package:rss/widget.dart';
 import 'package:url_launcher/url_launcher.dart'; // 用于外部浏览器打开链接
 import 'package:rss/database.dart';
+import 'package:rss/service/download.dart'; // 引入下载服务
+import 'package:rss/service/rss.dart';     // 引入解析服务
 
 final _db = AppDatabase();
 
@@ -52,6 +54,54 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       _isLoading = false;
       // 调用你的全局错误提示
       showErrorSnackBarGlobal('加载文章失败: $e');
+    }
+  }
+
+  // 下拉刷新当前单个订阅源的核心逻辑
+  Future<void> _refreshCurrentFeed() async {
+    // 1. 触发你现有的全局动画开始
+    final cancelLoading = await showLoadingDialogGlobal();
+
+    try {
+      // 2. 下载当前订阅源的 XML
+      final xmlText = await downloadXmlFromServer(widget.feed.feedUrl);
+
+      // 3. 解析文章
+      final parsedArticles = parseRssArticles(xmlText);
+
+      // 4. 增：利用批量入库方法写入文章（如果 guid 冲突则自动替代去重）
+      await _db.batch((batch) {
+        batch.insertAll(
+          _db.articles,
+          parsedArticles.map((item) => ArticlesCompanion(
+            guid: drift.Value(item['guid']!),
+            title: drift.Value(item['title']!),
+            feedUrl: drift.Value(widget.feed.feedUrl),
+            link: drift.Value(item['link']!),
+            description: drift.Value(item['description']!),
+            content: drift.Value(item['content']!),
+            enclosure: drift.Value(item['enclosure']!),
+            author: drift.Value(item['author']!),
+            date: drift.Value(item['date']!),
+            isRead: drift.Value(item['isRead']!),
+          )).toList(),
+          mode: drift.InsertMode.insertOrReplace,
+        );
+      });
+
+      // 5. 改：更新当前订阅源的 lastUpdated 时间戳为当前的最新秒数
+      final nowTimestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+      await (_db.update(_db.feeds)..where((tbl) => tbl.feedUrl.equals(widget.feed.feedUrl)))
+          .write(FeedsCompanion(lastUpdated: drift.Value(nowTimestamp)));
+
+      // 6. 刷新洗涤完毕后，重新拉取本地数据库填充 UI
+      await _loadArticles();
+
+    } catch (e) {
+      showErrorSnackBarGlobal('刷新订阅源失败: $e');
+    } finally {
+      // 7. final 分支雷打不动闭合全局动画
+      cancelLoading();
     }
   }
 
@@ -138,136 +188,149 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _articles.isEmpty
-          ? const Center(child: Text('当前分类下没有文章'))
-          : ListView.separated(
-        itemCount: _articles.length,
-        separatorBuilder: (context, index) => const Divider(height: 1),
-        itemBuilder: (context, index) {
-          final article = _articles[index];
-          final summary = _getSummary(article.description, article.content);
-          final dateText = _formatTimestamp(article.date);
+          ? RefreshIndicator(
+        onRefresh: _refreshCurrentFeed,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: const Center(child: Text('当前分类下没有文章\n下拉可以触发同步刷新')),
+          ),
+        ),
+      )
+          : RefreshIndicator(
+        onRefresh: _refreshCurrentFeed,
+        child: ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(), // 确保内容少时也能触发下拉手势
+          itemCount: _articles.length,
+          separatorBuilder: (context, index) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final article = _articles[index];
+            final summary = _getSummary(article.description, article.content);
+            final dateText = _formatTimestamp(article.date);
 
-          // 定义右侧图片的固定尺寸
-          const double imageWidth = 110.0;
-          const double imageHeight = 80.0;
+            // 定义右侧图片的固定尺寸
+            const double imageWidth = 110.0;
+            const double imageHeight = 80.0;
 
-          return InkWell(
-            onTap: () => _handleArticleTap(article),
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 左边部分：占满剩余宽度
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 标题：最多显示两行，超出截断
-                          Text(
-                            article.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                              color: article.isRead == 'false'
-                                  ? colorScheme.onSurface
-                                  : colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-
-                          // 描述：填满标题与作者之间的空白，超出截断
-                          Expanded(
-                            child: Text(
-                              summary,
+            return InkWell(
+              onTap: () => _handleArticleTap(article),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 左边部分：占满剩余宽度
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 标题：最多显示两行，超出截断
+                            Text(
+                              article.title,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 13,
-                                height: 1.3,
-                                color: colorScheme.onSurfaceVariant.withOpacity(
-                                  article.isRead == 'false' ? 1.0 : 0.5,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                height: 1.2,
+                                color: article.isRead == 'false'
+                                    ? colorScheme.onSurface
+                                    : colorScheme.onSurface.withOpacity(0.5),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // 描述：填满标题与作者之间的空白，超出截断
+                            Expanded(
+                              child: Text(
+                                summary,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  height: 1.3,
+                                  color: colorScheme.onSurfaceVariant.withOpacity(
+                                    article.isRead == 'false' ? 1.0 : 0.5,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
+                            const SizedBox(height: 4),
 
-                          // 作者
-                          Text(
-                            article.author.isNotEmpty ? '作者: ${article.author}' : '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                          ),
-                        ],
+                            // 作者
+                            Text(
+                              article.author.isNotEmpty ? '作者: ${article.author}' : '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: colorScheme.outline),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
+                      const SizedBox(width: 12),
 
-                    // 右边部分：固定宽度，高度由内部组件（图片+日期）撑起并限制整个控件高度
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // 比例缩放不失真的图片组件
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            article.enclosure,
-                            cacheWidth: imageWidth.toInt() * 2,
-                            cacheHeight: imageHeight.toInt() * 2,
-                            width: imageWidth,
-                            height: imageHeight,
-                            fit: BoxFit.cover, // 核心：保持原图比例裁剪缩放，不拉伸变形
-                            alignment: Alignment.center,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
+                      // 右边部分：固定宽度，高度由内部组件（图片+日期）撑起并限制整个控件高度
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // 比例缩放不失真的图片组件
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              article.enclosure,
+                              cacheWidth: imageWidth.toInt() * 2,
+                              cacheHeight: imageHeight.toInt() * 2,
+                              width: imageWidth,
+                              height: imageHeight,
+                              fit: BoxFit.cover, // 核心：保持原图比例裁剪缩放，不拉伸变形
+                              alignment: Alignment.center,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  width: imageWidth,
+                                  height: imageHeight,
+                                  color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                  alignment: Alignment.center,
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => Container(
                                 width: imageWidth,
                                 height: imageHeight,
                                 color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
                                 alignment: Alignment.center,
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 1.5,
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                ),
-                              );
-                            },
-                            errorBuilder: (_, __, ___) => Container(
-                              width: imageWidth,
-                              height: imageHeight,
-                              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                              alignment: Alignment.center,
-                              child: Icon(Icons.broken_image, size: 20, color: colorScheme.outline),
+                                child: Icon(Icons.broken_image, size: 20, color: colorScheme.outline),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
+                          const SizedBox(height: 6),
 
-                        // 日期
-                        Text(
-                          dateText,
-                          style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                        ),
-                      ],
-                    ),
-                  ],
+                          // 日期
+                          Text(
+                            dateText,
+                            style: TextStyle(fontSize: 11, color: colorScheme.outline),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
