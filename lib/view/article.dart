@@ -233,54 +233,46 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              article.title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                height: 1.2,
-                                color: isUnread
-                                    ? colorScheme.onSurface
-                                    : colorScheme.onSurface.withOpacity(0.5),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              summary,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 13,
-                                height: 1.3,
-                                color: colorScheme.onSurfaceVariant.withOpacity(
-                                  isUnread ? 1.0 : 0.5,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              article.author.isNotEmpty ? '作者: ${article.author}' : '',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  article.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.2,
+                                    color: isUnread
+                                        ? colorScheme.onSurface
+                                        : colorScheme.onSurface.withOpacity(0.5),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  summary,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    height: 1.3,
+                                    color: colorScheme.onSurfaceVariant.withOpacity(
+                                      isUnread ? 1.0 : 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(6),
                             child: CachedNetworkImage(
@@ -309,8 +301,23 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 6),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              article.author.isNotEmpty ? '作者: ${article.author}' : '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: colorScheme.outline),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               if (article.status == '1')
                                 Icon(Icons.star, size: 12, color: colorScheme.primary),
