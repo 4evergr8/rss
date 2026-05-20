@@ -84,7 +84,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
   Future<void> _importOpmlFile() async {
     try {
       // 1. 让用户选择本地文件
-      final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['opml', 'xml']);
+      final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['opml', 'xml']);
 
       if (result == null || result.files.single.path == null) {
         return; // 用户取消了选择
