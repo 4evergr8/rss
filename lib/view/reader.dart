@@ -122,159 +122,124 @@ class _ReaderScreenState extends State<ReaderScreen> {
         : currentArticle.description;
 
     return Scaffold(
-      backgroundColor: colorScheme.surfaceContainerLow, // 采用与 feed 列表底色一致的优雅浅色背景
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        backgroundColor: colorScheme.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          currentArticle.title,
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
       ),
       body: SingleChildScrollView(
         controller: _scrollController,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 800), // 限制最大宽度，提升 PC/Web 端大屏可读性
-            child: Card(
-              margin: EdgeInsets.zero,
-              elevation: 1,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // 与 feed 卡片统一的圆角风
-              clipBehavior: Clip.antiAlias,
-              color: colorScheme.surface,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // 大标题
-                    Text(
-                      currentArticle.title,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        height: 1.4,
-                        color: colorScheme.onSurface,
-                      ),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentArticle.title,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      height: 1.4,
+                      color: colorScheme.onSurface,
                     ),
-                    const SizedBox(height: 16),
-                    // 元数据标签栏 (作者、时间)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (currentArticle.author.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: colorScheme.primary.withAlpha(15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.person_outline, size: 14, color: colorScheme.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  currentArticle.author,
-                                  style: TextStyle(color: colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                          ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: colorScheme.onSurfaceVariant.withAlpha(15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant),
-                              const SizedBox(width: 4),
-                              Text(
-                                _formatTimestamp(currentArticle.date),
-                                style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
-                              ),
-                            ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      if (currentArticle.author.isNotEmpty) ...[
+                        Icon(Icons.person_outline, size: 14, color: colorScheme.onSurfaceVariant),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            currentArticle.author,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                           ),
                         ),
+                        const SizedBox(width: 16),
                       ],
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Divider(height: 1),
-                    ),
-                    // HTML 文章正文内容
-                    mainContent.isNotEmpty
-                        ? HtmlWidget(
-                      mainContent,
-                      textStyle: TextStyle(
-                        fontSize: 16.0,
-                        height: 1.6,
-                        color: colorScheme.onSurface,
+                      Icon(Icons.access_time, size: 14, color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatTimestamp(currentArticle.date),
+                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                       ),
-                      onTapUrl: (url) async {
-                        await _launchInBrowser(url);
-                        return true;
-                      },
-                    )
-                        : const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Text(
-                          '此文章没有可显示的文本内容',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              clipBehavior: Clip.antiAlias,
+              color: colorScheme.surfaceContainerLow,
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: mainContent.isNotEmpty
+                    ? HtmlWidget(
+                  mainContent,
+                  textStyle: TextStyle(
+                    fontSize: 16.0,
+                    height: 1.6,
+                    color: colorScheme.onSurface,
+                  ),
+                  onTapUrl: (url) async {
+                    await _launchInBrowser(url);
+                    return true;
+                  },
+                )
+                    : const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Text(
+                      '此文章没有可显示的文本内容',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
       bottomNavigationBar: BottomAppBar(
-        elevation: 8,
-        color: colorScheme.surface,
-        surfaceTintColor: colorScheme.surface,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-                color: isFirst ? colorScheme.outline.withAlpha(40) : colorScheme.primary,
-                onPressed: isFirst ? null : () => _changeArticle(_currentIndex - 1),
-              ),
-              IconButton(
-                icon: Icon(isStarred ? Icons.star : Icons.star_border, size: 22),
-                color: isStarred ? Colors.amber : colorScheme.primary,
-                onPressed: _toggleStar,
-              ),
-              IconButton(
-                icon: const Icon(Icons.language, size: 22),
-                color: currentArticle.link.isNotEmpty ? colorScheme.primary : colorScheme.outline.withAlpha(40),
-                onPressed: currentArticle.link.isNotEmpty ? () => _launchInBrowser(currentArticle.link) : null,
-              ),
-              IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, size: 20),
-                color: isLast ? colorScheme.outline.withAlpha(40) : colorScheme.primary,
-                onPressed: isLast ? null : () => _changeArticle(_currentIndex + 1),
-              ),
-            ],
-          ),
+        elevation: 4,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new),
+              color: isFirst ? colorScheme.outline.withAlpha(76) : colorScheme.primary,
+              onPressed: isFirst ? null : () => _changeArticle(_currentIndex - 1),
+            ),
+            IconButton(
+              icon: Icon(isStarred ? Icons.star : Icons.star_border),
+              color: isStarred ? Colors.amber : colorScheme.primary,
+              onPressed: _toggleStar,
+            ),
+            IconButton(
+              icon: const Icon(Icons.language),
+              color: colorScheme.primary,
+              onPressed: currentArticle.link.isNotEmpty ? () => _launchInBrowser(currentArticle.link) : null,
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios),
+              color: isLast ? colorScheme.outline.withAlpha(76) : colorScheme.primary,
+              onPressed: isLast ? null : () => _changeArticle(_currentIndex + 1),
+            ),
+          ],
         ),
       ),
     );
