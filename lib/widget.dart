@@ -4,8 +4,6 @@ import 'package:rss/main.dart';
 import 'package:rss/view/add.dart';
 import 'package:rss/view/feed.dart';
 
-
-
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
 
@@ -17,12 +15,13 @@ class _BottomNavBarState extends State<BottomNavBar> {
   int _selectedIndex = 0;
   late final PageController _pageController;
 
-  // 3 个核心页面栏位（未读、所有、设置）
-  // 未读和所有复用同一个页面组件，通过参数 showUnreadOnly 进行数据查询区分
+  // 3 个核心页面栏位（未读、所有、星标）
+  // 统一复用同一个 RssFeedScreen 页面组件，通过 feedType 参数进行数据查询区分
+  // feedType 对应关系: 0 = 未读, 1 = 所有, 2 = 星标
   static final List<Widget> _widgetOptions = <Widget>[
-    const RssFeedScreen(showUnreadOnly: true),  // 未读
-    const RssFeedScreen(showUnreadOnly: false), // 所有
-    const SettingsScreen(),                     // 设置
+    const RssFeedScreen(feedType: 0), // 未读
+    const RssFeedScreen(feedType: 1), // 所有
+    const RssFeedScreen(feedType: 2), // 星标
   ];
 
   @override
@@ -49,27 +48,23 @@ class _BottomNavBarState extends State<BottomNavBar> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      // 顶栏：只有在非设置页面（未读、所有）时才显示添加订阅按钮
       appBar: AppBar(
-        title: Text(_selectedIndex == 0 ? '未读订阅' : _selectedIndex == 1 ? '所有订阅' : '软件设置'),
+        title: Text(_selectedIndex == 0 ? '未读订阅' : _selectedIndex == 1 ? '所有订阅' : '星标订阅'),
         backgroundColor: colorScheme.surface,
-        actions: _selectedIndex != 2
-            ? [
+        actions: [
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: () {
-              // 跳转至添加订阅界面
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const AddFeedScreen()),
               );
             },
           ),
-        ]
-            : null,
+        ],
       ),
       body: PageView(
         controller: _pageController,
-        physics: const NeverScrollableScrollPhysics(), // 禁止手势左右滑动切换
+        physics: const NeverScrollableScrollPhysics(),
         children: _widgetOptions,
         onPageChanged: (index) {
           setState(() => _selectedIndex = index);
@@ -88,9 +83,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
             label: '所有',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
-            label: '设置',
+            icon: Icon(Icons.star_outline),
+            activeIcon: Icon(Icons.star),
+            label: '星标',
           ),
         ],
         currentIndex: _selectedIndex,
@@ -98,26 +93,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
         unselectedItemColor: colorScheme.secondary,
         backgroundColor: colorScheme.surface,
         onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed, // 确保 3 个标签平分且不挤压
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }
 }
-
-// ==================== 临时的占位页面组件 ====================
-
-
-
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text('设置页面'));
-  }
-}
-
-
 
 // ==================== 保留现有的全局组件 ====================
 
