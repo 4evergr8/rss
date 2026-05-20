@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:collection/collection.dart'; // 用于分组函数 groupListsBy
+import 'package:cached_network_image/cached_network_image.dart'; // 引入缓存图片库
 import 'package:rss/database.dart';
 import 'package:rss/service/download.dart';
 import 'package:rss/service/rss.dart';
-import 'package:rss/view/artical.dart';
+import 'package:rss/view/article.dart';
 import 'package:rss/widget.dart';
-
-
 
 final _db = AppDatabase();
 
@@ -87,7 +86,6 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
       if (allFeeds.isEmpty) return;
 
       // 3. 按照 lastUpdated 的数字字符串升序排序（最久没更新的排在最前面）
-      // 由于存的是纯数字字符串，直接 compareTo 即可获得正确的先后顺序
       final sortedFeeds = List<Feed>.from(allFeeds);
       sortedFeeds.sort((a, b) => a.lastUpdated.compareTo(b.lastUpdated));
 
@@ -181,11 +179,19 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
               return ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
                 leading: feed.iconUrl.isNotEmpty
-                    ? Image.network(
-                  feed.iconUrl,
+                    ? CachedNetworkImage(
+                  imageUrl: feed.iconUrl,
                   width: 24,
                   height: 24,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.rss_feed),
+                  fit: BoxFit.contain,
+                  // 加载过程中的占位组件
+                  placeholder: (context, url) => const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  // 出错时的回退组件
+                  errorWidget: (context, url, error) => const Icon(Icons.rss_feed),
                 )
                     : const Icon(Icons.rss_feed),
                 title: Text(feed.title),
