@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:rss/main.dart';
 import 'package:rss/view/add.dart';
 import 'package:rss/view/feed.dart';
 
-// 全局路由 Key，供全局弹窗、组件定位使用（确保你在 MaterialApp 的 navigatorKey 中配置了它）
-final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
