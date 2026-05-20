@@ -280,8 +280,6 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                             borderRadius: BorderRadius.circular(6),
                             child: Image.network(
                               article.enclosure,
-                              cacheWidth: imageWidth.toInt() * 2,
-                              cacheHeight: imageHeight.toInt() * 2,
                               width: imageWidth,
                               height: imageHeight,
                               fit: BoxFit.cover, // 核心：保持原图比例裁剪缩放，不拉伸变形
