@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:rss/main.dart';
 import 'package:rss/view/add.dart';
 import 'package:rss/view/feed.dart';
+import 'package:rss/view/settings.dart';
 
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
@@ -52,6 +53,14 @@ class _BottomNavBarState extends State<BottomNavBar> {
         title: Text(_selectedIndex == 0 ? '未读订阅' : _selectedIndex == 1 ? '所有订阅' : '星标订阅'),
         backgroundColor: colorScheme.surface,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline),
             onPressed: () {
