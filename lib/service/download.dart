@@ -9,7 +9,7 @@ Future<String> downloadXmlFromServer(String url) async {
         'User-Agent': 'Mozilla/5.0 (compatible; MyRssReader/1.0.0; +contact@example.com) Dart/3.11',
         'Accept': 'application/xml, text/xml, application/rss+xml, application/atom+xml, */*',
       },
-    ).timeout(const Duration(seconds: 10));
+    ).timeout(const Duration(seconds: 5));
 
     // 如果状态码不是 200，视为请求失败，并附带状态码与响应体
     if (response.statusCode != 200) {
