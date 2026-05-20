@@ -93,7 +93,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final cancelLoading = await showLoadingDialogGlobal();
     try {
       final dbDir = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbDir.path, 'db.sqlite'));
+      final dbFile = File(p.join(dbDir.path, 'app_database.sqlite'));
 
       if (!await dbFile.exists()) {
         throw '未找到数据库文件';
