@@ -65,13 +65,22 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     try {
       final xmlText = await downloadXmlFromServer(widget.feed.feedUrl);
 
-      // 修改后：改用最新的合并平铺解析函数
+      // 调用合并后的平铺函数
       final parsedData = parseRss(xmlText);
       final List<Map<String, String>> parsedArticles = List<Map<String, String>>.from(parsedData['articles']);
 
-      // 强制覆盖：最新解析结果不为空则覆盖，否则写为空字符串覆盖旧数据
-      final String siteUrl = parsedData['siteUrl'] ?? '';
-      final String iconUrl = parsedData['iconUrl'] ?? '';
+      // 提取解析到的新值
+      final String? parsedSite = parsedData['siteUrl'];
+      final String? parsedIcon = parsedData['iconUrl'];
+
+      // 逻辑：如果解析到了非空字段就覆盖新值，否则严格保留原本数据库里的值
+      final String siteUrl = (parsedSite != null && parsedSite.trim().isNotEmpty)
+          ? parsedSite.trim()
+          : widget.feed.siteUrl;
+
+      final String iconUrl = (parsedIcon != null && parsedIcon.trim().isNotEmpty)
+          ? parsedIcon.trim()
+          : widget.feed.iconUrl;
 
       for (var item in parsedArticles) {
         final existing = await (_db.select(
@@ -95,19 +104,19 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           await _db
               .into(_db.articles)
               .insert(
-            ArticlesCompanion(
-              guid: drift.Value(item['guid']!),
-              title: drift.Value(item['title']!),
-              feedUrl: drift.Value(widget.feed.feedUrl),
-              link: drift.Value(item['link']!),
-              description: drift.Value(item['description']!),
-              content: drift.Value(item['content']!),
-              enclosure: drift.Value(item['enclosure']!),
-              author: drift.Value(item['author']!),
-              date: drift.Value(item['date']!),
-              status: const drift.Value('2'),
-            ),
-          );
+                ArticlesCompanion(
+                  guid: drift.Value(item['guid']!),
+                  title: drift.Value(item['title']!),
+                  feedUrl: drift.Value(widget.feed.feedUrl),
+                  link: drift.Value(item['link']!),
+                  description: drift.Value(item['description']!),
+                  content: drift.Value(item['content']!),
+                  enclosure: drift.Value(item['enclosure']!),
+                  author: drift.Value(item['author']!),
+                  date: drift.Value(item['date']!),
+                  status: const drift.Value('2'),
+                ),
+              );
         }
       }
 
@@ -187,232 +196,161 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.feed.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: colorScheme.surface,
-        surfaceTintColor: Colors.transparent,
+        title: Text(widget.feed.title),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _articles.isEmpty
           ? RefreshIndicator(
-        onRefresh: _refreshCurrentFeed,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.inbox_outlined, size: 48, color: colorScheme.outline.withOpacity(0.5)),
-                  const SizedBox(height: 12),
-                  Text(
-                    '当前分类下没有文章\n下拉可以触发同步刷新',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: colorScheme.outline, height: 1.5, fontSize: 14),
-                  ),
-                ],
+              onRefresh: _refreshCurrentFeed,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: const Center(child: Text('当前分类下没有文章\n下拉可以触发同步刷新')),
+                ),
               ),
-            ),
-          ),
-        ),
-      )
+            )
           : RefreshIndicator(
-        onRefresh: _refreshCurrentFeed,
-        child: ListView.separated(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: _articles.length,
-          separatorBuilder: (context, index) => Divider(height: 1, indent: 16, endIndent: 16, color: colorScheme.outlineVariant.withOpacity(0.4)),
-          itemBuilder: (context, index) {
-            final article = _articles[index];
-            final summary = _getSummary(article.description, article.content);
-            final dateText = _formatTimestamp(article.date);
+              onRefresh: _refreshCurrentFeed,
+              child: ListView.separated(
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: _articles.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final article = _articles[index];
+                  final summary = _getSummary(article.description, article.content);
+                  final dateText = _formatTimestamp(article.date);
 
-            final isUnread = article.status != '0' && article.status != '1';
-            final hasImage = article.enclosure.trim().isNotEmpty;
+                  final isUnread = article.status != '0' && article.status != '1';
 
-            const double imageWidth = 96.0;
-            const double imageHeight = 72.0;
+                  const double imageWidth = 110.0;
+                  const double imageHeight = 80.0;
 
-            return InkWell(
-              onTap: () => _handleArticleTap(article),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (isUnread) ...[
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 6.0, right: 6.0),
-                                      child: Container(
-                                        width: 7,
-                                        height: 7,
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.primary,
-                                          shape: BoxShape.circle,
+                  return InkWell(
+                    onTap: () => _handleArticleTap(article),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        article.title,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.2,
+                                          color: isUnread
+                                              ? colorScheme.onSurface
+                                              : colorScheme.onSurface.withOpacity(0.5),
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                  Expanded(
-                                    child: Text(
-                                      article.title,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
-                                        height: 1.3,
-                                        color: isUnread
-                                            ? colorScheme.onSurface
-                                            : colorScheme.onSurface.withOpacity(0.45),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        summary,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.3,
+                                          color: colorScheme.onSurfaceVariant.withOpacity(isUnread ? 1.0 : 0.5),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: CachedNetworkImage(
+                                    imageUrl: article.enclosure,
+                                    width: imageWidth,
+                                    height: imageHeight,
+                                    fit: BoxFit.cover,
+                                    alignment: Alignment.center,
+                                    placeholder: (context, url) => Container(
+                                      width: imageWidth,
+                                      height: imageHeight,
+                                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                      alignment: Alignment.center,
+                                      child: const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 1.5),
                                       ),
                                     ),
+                                    errorWidget: (context, url, error) => Container(
+                                      width: imageWidth,
+                                      height: imageHeight,
+                                      color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                      alignment: Alignment.center,
+                                      child: Icon(Icons.broken_image, size: 20, color: colorScheme.outline),
+                                    ),
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                summary,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  height: 1.4,
-                                  color: isUnread
-                                      ? colorScheme.onSurfaceVariant
-                                      : colorScheme.onSurfaceVariant.withOpacity(0.5),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (hasImage) ...[
-                          const SizedBox(width: 16),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: CachedNetworkImage(
-                              imageUrl: article.enclosure,
-                              width: imageWidth,
-                              height: imageHeight,
-                              fit: BoxFit.cover,
-                              alignment: Alignment.center,
-                              placeholder: (context, url) => Container(
-                                width: imageWidth,
-                                height: imageHeight,
-                                color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                                alignment: Alignment.center,
-                                child: const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 1.5),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    article.author.isNotEmpty ? article.author : '',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 11, color: colorScheme.outline),
+                                  ),
                                 ),
-                              ),
-                              errorWidget: (context, url, error) => Container(
-                                width: imageWidth,
-                                height: imageHeight,
-                                color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
-                                alignment: Alignment.center,
-                                child: Icon(Icons.broken_image_outlined, size: 20, color: colorScheme.outline.withOpacity(0.6)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            article.author.isNotEmpty ? article.author : widget.feed.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isUnread ? colorScheme.outline : colorScheme.outline.withOpacity(0.5),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (article.status == '1') ...[
-                              Icon(Icons.star_rounded, size: 14, color: colorScheme.primary),
-                              const SizedBox(width: 4),
-                            ],
-                            Text(
-                              dateText,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: isUnread ? colorScheme.outline : colorScheme.outline.withOpacity(0.5),
-                              ),
+                                const SizedBox(width: 12),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (article.status == '1') Icon(Icons.star, size: 12, color: colorScheme.primary),
+                                    if (article.status == '1') const SizedBox(width: 4),
+                                    Text(dateText, style: TextStyle(fontSize: 11, color: colorScheme.outline)),
+                                  ],
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: colorScheme.outlineVariant.withOpacity(0.3), width: 1)),
-        ),
-        child: BottomNavigationBar(
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.mark_as_unread_outlined),
-              activeIcon: Icon(Icons.mark_as_unread),
-              label: '未读',
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.rss_feed_outlined),
-              activeIcon: Icon(Icons.rss_feed),
-              label: '所有',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.star_outline_rounded),
-              activeIcon: Icon(Icons.star_rounded),
-              label: '星标',
-            ),
-          ],
-          currentIndex: _currentSubIndex,
-          selectedItemColor: colorScheme.primary,
-          unselectedItemColor: colorScheme.onSurfaceVariant.withOpacity(0.6),
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          backgroundColor: colorScheme.surface,
-          onTap: (index) {
-            if (_currentSubIndex == index) return;
-            setState(() {
-              _currentSubIndex = index;
-            });
-            _loadArticles();
-          },
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.mark_as_unread_outlined),
+            activeIcon: Icon(Icons.mark_as_unread),
+            label: '未读',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.rss_feed_outlined), activeIcon: Icon(Icons.rss_feed), label: '所有'),
+          BottomNavigationBarItem(icon: Icon(Icons.star_outline), activeIcon: Icon(Icons.star), label: '星标'),
+        ],
+        currentIndex: _currentSubIndex,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.secondary,
+        type: BottomNavigationBarType.fixed,
+        onTap: (index) {
+          setState(() {
+            _currentSubIndex = index;
+          });
+          _loadArticles();
+        },
       ),
     );
   }
