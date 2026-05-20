@@ -27,6 +27,9 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
   // 状态：是否成功获取到了 XML 元数据
   bool _hasLoaded = false;
 
+  // 状态：保存时所选择的显示方式，默认为 'content'
+  String _selectedDisplayMode = 'content';
+
   // 点击粘贴按钮触发的函数
   Future<void> _pasteClipboard() async {
     final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
@@ -37,7 +40,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
     }
   }
 
-  // 点击“解析订阅源”按钮触发的函数
+  // 点击“解析订阅源”按钮触发 the 函数
   Future<void> _fetchAndParseFeed() async {
     final inputUrl = _urlController.text.trim();
     if (inputUrl.isEmpty) {
@@ -80,16 +83,16 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
       await _db
           .into(_db.feeds)
           .insertOnConflictUpdate(
-            FeedsCompanion(
-              feedUrl: drift.Value(_urlController.text.trim()),
-              siteUrl: drift.Value(_siteUrlController.text.trim()),
-              title: drift.Value(_titleController.text.trim()),
-              category: drift.Value(_categoryController.text.trim()),
-              iconUrl: drift.Value(_iconUrlController.text.trim()),
-              lastUpdated: const drift.Value('0'),
-              displayMode: const drift.Value('list'),
-            ),
-          );
+        FeedsCompanion(
+          feedUrl: drift.Value(_urlController.text.trim()),
+          siteUrl: drift.Value(_siteUrlController.text.trim()),
+          title: drift.Value(_titleController.text.trim()),
+          category: drift.Value(_categoryController.text.trim()),
+          iconUrl: drift.Value(_iconUrlController.text.trim()),
+          lastUpdated: const drift.Value('0'),
+          displayMode: drift.Value(_selectedDisplayMode), // 使用下拉选框的选择值
+        ),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('订阅保存成功！')));
@@ -174,6 +177,24 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                 controller: _iconUrlController,
                 maxLines: null, // 自动扩展行数
                 decoration: const InputDecoration(labelText: '图标链接', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 16),
+
+              // 新增：显示方式下拉选框
+              DropdownButtonFormField<String>(
+                value: _selectedDisplayMode,
+                decoration: const InputDecoration(labelText: '显示方式', border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 'content', child: Text('content 模式 (内置阅读器)')),
+                  DropdownMenuItem(value: 'web', child: Text('web 模式 (外部浏览器)')),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedDisplayMode = value;
+                    });
+                  }
+                },
               ),
               const SizedBox(height: 24),
 
