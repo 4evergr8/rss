@@ -102,23 +102,22 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
       for (var feed in sortedFeeds) {
         try {
           final xmlText = await downloadXmlFromServer(feed.feedUrl);
-          final parsedArticles = parseRssArticles(xmlText);
 
-          // 默认维持数据库现有的值
-          String siteUrl = feed.siteUrl;
-          String iconUrl = feed.iconUrl;
+          // 修改后：调用合并后的平铺函数
+          final parsedData = parseRss(xmlText);
+          final List<Map<String, String>> parsedArticles = List<Map<String, String>>.from(parsedData['articles']);
 
-          if (parsedArticles.isNotEmpty) {
-            final firstItem = parsedArticles.first;
+          // 有值覆盖，没有不覆盖：检查解析值是否有效，无效则沿用本地数据库已有的值
+          final String? parsedSite = parsedData['siteUrl'];
+          final String? parsedIcon = parsedData['iconUrl'];
 
-            // 检查解析结果中是否存在该字段的 key，如果存在才进行强制覆盖
-            if (firstItem.containsKey('feedSiteUrl')) {
-              siteUrl = firstItem['feedSiteUrl'] ?? '';
-            }
-            if (firstItem.containsKey('feedIconUrl')) {
-              iconUrl = firstItem['feedIconUrl'] ?? '';
-            }
-          }
+          final String siteUrl = (parsedSite != null && parsedSite.trim().isNotEmpty)
+              ? parsedSite.trim()
+              : feed.siteUrl;
+
+          final String iconUrl = (parsedIcon != null && parsedIcon.trim().isNotEmpty)
+              ? parsedIcon.trim()
+              : feed.iconUrl;
 
           for (var item in parsedArticles) {
             final existing = await (_db.select(
