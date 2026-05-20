@@ -14,6 +14,9 @@ dependencies:
   drift: any
   sqlite3_flutter_libs: any
   path_provider: any
+  url_launcher: any
+  collection: any
+  flutter_widget_from_html: any
   path: any
   google_fonts: any
   xml: any
