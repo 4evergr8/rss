@@ -25,6 +25,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   int _currentSubIndex = 0;
   List<Article> _articles = [];
   bool _isLoading = true;
+  bool _isSyncing = false; // 标记是否正在同步刷新
 
   @override
   void initState() {
@@ -104,19 +105,19 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           await _db
               .into(_db.articles)
               .insert(
-                ArticlesCompanion(
-                  guid: drift.Value(item['guid']!),
-                  title: drift.Value(item['title']!),
-                  feedUrl: drift.Value(widget.feed.feedUrl),
-                  link: drift.Value(item['link']!),
-                  description: drift.Value(item['description']!),
-                  content: drift.Value(item['content']!),
-                  enclosure: drift.Value(item['enclosure']!),
-                  author: drift.Value(item['author']!),
-                  date: drift.Value(item['date']!),
-                  status: const drift.Value('2'),
-                ),
-              );
+            ArticlesCompanion(
+              guid: drift.Value(item['guid']!),
+              title: drift.Value(item['title']!),
+              feedUrl: drift.Value(widget.feed.feedUrl),
+              link: drift.Value(item['link']!),
+              description: drift.Value(item['description']!),
+              content: drift.Value(item['content']!),
+              enclosure: drift.Value(item['enclosure']!),
+              author: drift.Value(item['author']!),
+              date: drift.Value(item['date']!),
+              status: const drift.Value('2'),
+            ),
+          );
         }
       }
 
@@ -197,81 +198,114 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.feed.title),
+        actions: [
+          _isSyncing
+              ? const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+              : IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: '刷新当前源',
+            onPressed: _refreshCurrentFeed,
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _articles.isEmpty
           ? RefreshIndicator(
-              onRefresh: _refreshCurrentFeed,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.7,
-                  child: const Center(child: Text('当前分类下没有文章\n下拉可以触发同步刷新')),
-                ),
+        onRefresh: _refreshCurrentFeed,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: const Center(
+              child: Text(
+                '当前分类下没有文章\n可点击右上角按钮触发同步刷新',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, height: 1.5),
               ),
-            )
+            ),
+          ),
+        ),
+      )
           : RefreshIndicator(
-              onRefresh: _refreshCurrentFeed,
-              child: ListView.separated(
-                physics: const AlwaysScrollableScrollPhysics(),
-                itemCount: _articles.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final article = _articles[index];
-                  final summary = _getSummary(article.description, article.content);
-                  final dateText = _formatTimestamp(article.date);
+        onRefresh: _refreshCurrentFeed,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: _articles.length,
+          itemBuilder: (context, index) {
+            final article = _articles[index];
+            final summary = _getSummary(article.description, article.content);
+            final dateText = _formatTimestamp(article.date);
 
-                  final isUnread = article.status != '0' && article.status != '1';
+            final isUnread = article.status != '0' && article.status != '1';
+            final hasEnclosure = article.enclosure.trim().isNotEmpty;
 
-                  const double imageWidth = 110.0;
-                  const double imageHeight = 80.0;
+            const double imageWidth = 100.0;
+            const double imageHeight = 74.0;
 
-                  return InkWell(
-                    onTap: () => _handleArticleTap(article),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: IntrinsicHeight(
-                        child: Column(
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 6),
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => _handleArticleTap(article),
+                child: Padding(
+                  padding: const EdgeInsets.all(14.0),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        article.title,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.2,
-                                          color: isUnread
-                                              ? colorScheme.onSurface
-                                              : colorScheme.onSurface.withOpacity(0.5),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        summary,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          height: 1.3,
-                                          color: colorScheme.onSurfaceVariant.withOpacity(isUnread ? 1.0 : 0.5),
-                                        ),
-                                      ),
-                                    ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    article.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      height: 1.3,
+                                      color: isUnread
+                                          ? colorScheme.onSurface
+                                          : colorScheme.onSurface.withOpacity(0.45),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(6),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    summary,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      height: 1.35,
+                                      color: isUnread
+                                          ? colorScheme.onSurfaceVariant
+                                          : colorScheme.onSurfaceVariant.withOpacity(0.45),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (hasEnclosure) ...[
+                              const SizedBox(width: 14),
+                              Opacity(
+                                opacity: isUnread ? 1.0 : 0.6,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
                                   child: CachedNetworkImage(
                                     imageUrl: article.enclosure,
                                     width: imageWidth,
@@ -298,39 +332,53 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                     ),
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    article.author.isNotEmpty ? article.author : '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11, color: colorScheme.outline),
-                                  ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                article.author.isNotEmpty ? article.author : '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: colorScheme.outline.withOpacity(isUnread ? 1.0 : 0.6),
                                 ),
-                                const SizedBox(width: 12),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (article.status == '1') Icon(Icons.star, size: 12, color: colorScheme.primary),
-                                    if (article.status == '1') const SizedBox(width: 4),
-                                    Text(dateText, style: TextStyle(fontSize: 11, color: colorScheme.outline)),
-                                  ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (article.status == '1') ...[
+                                  Icon(Icons.star, size: 12, color: colorScheme.primary),
+                                  const SizedBox(width: 4),
+                                ],
+                                Text(
+                                  dateText,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: colorScheme.outline.withOpacity(isUnread ? 1.0 : 0.6),
+                                  ),
                                 ),
                               ],
                             ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
+            );
+          },
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(
@@ -338,8 +386,16 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
             activeIcon: Icon(Icons.mark_as_unread),
             label: '未读',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.rss_feed_outlined), activeIcon: Icon(Icons.rss_feed), label: '所有'),
-          BottomNavigationBarItem(icon: Icon(Icons.star_outline), activeIcon: Icon(Icons.star), label: '星标'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.rss_feed_outlined),
+            activeIcon: Icon(Icons.rss_feed),
+            label: '所有',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.star_outline),
+            activeIcon: Icon(Icons.star),
+            label: '星标',
+          ),
         ],
         currentIndex: _currentSubIndex,
         selectedItemColor: colorScheme.primary,
