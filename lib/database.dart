@@ -37,7 +37,7 @@ class Articles extends Table {
   TextColumn get enclosure => text()();   // 媒体
   TextColumn get author => text()();      // 作者
   TextColumn get date => text()();        // 日期
-  TextColumn get isRead => text()();      // 是否已读
+  TextColumn get status => text()();      // 是否已读
 
   @override
   Set<Column> get primaryKey => {guid};   // 指定guid为主键
