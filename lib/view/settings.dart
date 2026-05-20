@@ -184,7 +184,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('确定删除', style: TextStyle(color: Colors.red)),
+                            child: Text('确定删除', style: TextStyle(color: theme.colorScheme.error)),
                           ),
                         ],
                       ),
@@ -204,7 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     }
                   },
-                  child: const Text('删除订阅', style: TextStyle(color: Colors.red)),
+                  child: Text('删除订阅', style: TextStyle(color: theme.colorScheme.error)),
                 ),
                 TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
                 TextButton(
