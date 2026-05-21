@@ -121,13 +121,13 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
                     author: drift.Value(item['author']!),
                     date: drift.Value(item['date']!),
                   ),
-                  mode: drift.InsertMode.insertOrReplace,
+                  mode: drift.InsertMode.insertOrIgnore,
                 );
               }
             });
           }
 
-          final nowTimestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+          final nowTimestamp = (DateTime.now().millisecondsSinceEpoch).toString();
           await (_db.update(_db.feeds)..where((tbl) => tbl.feedUrl.equals(feed.feedUrl))).write(
             FeedsCompanion(
               lastUpdated: drift.Value(nowTimestamp),
@@ -136,7 +136,7 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
             ),
           );
         } catch (singleError) {
-          debugPrint('更新订阅源 [${feed.title}] 失败，已跳过: $singleError');
+          showErrorSnackBarGlobal('更新订阅源 [${feed.title}] 失败，已跳过: $singleError');
           continue;
         }
       }
