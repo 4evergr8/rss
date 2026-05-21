@@ -1,24 +1,36 @@
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
-/// 纯函数：传入链接，下载文本内容。仅处理下载过程中的网络错误与非200状态码，超时时间为10秒。
 Future<String> downloadXmlFromServer(String url) async {
-  try {
-    final response = await http.get(
-      Uri.parse(url),
+  final dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 2),
+      receiveTimeout: const Duration(seconds: 10),
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; MyRssReader/1.0.0; +contact@example.com) Dart/3.11',
         'Accept': 'application/xml, text/xml, application/rss+xml, application/atom+xml, */*',
       },
-    ).timeout(const Duration(seconds: 5));
+    ),
+  );
 
-    // 如果状态码不是 200，视为请求失败，并附带状态码与响应体
+  try {
+    final response = await dio.get<String>(url);
+
     if (response.statusCode != 200) {
-      throw '请求失败，服务器返回状态码：${response.statusCode}\n返回内容：\n${response.body}';
+      throw '请求失败，服务器返回状态码：${response.statusCode}\n返回内容：\n${response.data}';
     }
 
-    return response.body;
+    return response.data ?? '';
+  } on DioException catch (e) {
+    if (e.type == DioExceptionType.connectionTimeout) {
+      throw '网络下载发生错误: 连接超时（2秒）';
+    } else if (e.type == DioExceptionType.receiveTimeout) {
+      throw '网络下载发生错误: 服务器返回数据超时（10秒）';
+    } else if (e.response != null) {
+      throw '请求失败，服务器返回状态码：${e.response?.statusCode}\n返回内容：\n${e.response?.data}';
+    } else {
+      throw '网络下载发生错误: ${e.message}';
+    }
   } catch (e) {
-    // 捕获超时、断网等底层网络连接硬错误，并直接向上抛出详细信息
     throw '网络下载发生错误: $e';
   }
 }
