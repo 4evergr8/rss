@@ -98,13 +98,13 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
           );
         }).toList();
 
-        // 批量执行 InsertOrReplace
+
         await _db.batch((batch) {
-          batch.insertAll(_db.articles, companions, mode: drift.InsertMode.insertOrReplace);
+          batch.insertAll(_db.articles, companions, mode: drift.InsertMode.insertOrIgnore);
         });
       }
 
-      final nowTimestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
+      final nowTimestamp = (DateTime.now().millisecondsSinceEpoch).toString();
       await (_db.update(_db.feeds)..where((tbl) => tbl.feedUrl.equals(widget.feed.feedUrl))).write(
         FeedsCompanion(
           lastUpdated: drift.Value(nowTimestamp),
@@ -135,7 +135,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
   String _formatTimestamp(String timestampStr) {
     try {
       final seconds = int.parse(timestampStr);
-      final date = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
+      final date = DateTime.fromMillisecondsSinceEpoch(seconds);
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     } catch (_) {
       return timestampStr;
