@@ -12,25 +12,9 @@ Future<String> downloadXmlFromServer(String url) async {
     ),
   );
 
-  try {
-    final response = await dio.get<String>(url);
-
-    if (response.statusCode != 200) {
-      throw '请求失败，服务器返回状态码：${response.statusCode}\n返回内容：\n${response.data}';
-    }
-
-    return response.data ?? '';
-  } on DioException catch (e) {
-    if (e.type == DioExceptionType.connectionTimeout) {
-      throw '网络下载发生错误: 连接超时（2秒）';
-    } else if (e.type == DioExceptionType.receiveTimeout) {
-      throw '网络下载发生错误: 服务器返回数据超时（10秒）';
-    } else if (e.response != null) {
-      throw '请求失败，服务器返回状态码：${e.response?.statusCode}\n返回内容：\n${e.response?.data}';
-    } else {
-      throw '网络下载发生错误: ${e.message}';
-    }
-  } catch (e) {
-    throw '网络下载发生错误: $e';
+  final response = await dio.get<String>(url);
+  if (response.statusCode != 200) {
+    throw '请求失败，服务器返回状态码：${response.statusCode}\n返回内容：\n${response.data}';
   }
+  return response.data ?? '';
 }
