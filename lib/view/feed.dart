@@ -11,7 +11,6 @@ import 'package:rss/widget.dart';
 final _db = AppDatabase();
 
 class RssFeedScreen extends StatefulWidget {
-  // feedType 对应关系: 0 = 未读, 1 = 所有, 2 = 星标
   final int feedType;
 
   const RssFeedScreen({super.key, required this.feedType});
@@ -103,46 +102,29 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
           final parsedData = parseRss(xmlText);
           final List<Map<String, String>> parsedArticles = List<Map<String, String>>.from(parsedData['articles']);
 
-          // 强制覆盖逻辑保持一致
           final String siteUrl = parsedData['siteUrl'] ?? '';
           final String iconUrl = parsedData['iconUrl'] ?? '';
 
-          for (var item in parsedArticles) {
-            final existing = await (_db.select(
-              _db.articles,
-            )..where((tbl) => tbl.guid.equals(item['guid']!))).getSingleOrNull();
-
-            if (existing != null) {
-              await (_db.update(_db.articles)..where((tbl) => tbl.guid.equals(item['guid']!))).write(
-                ArticlesCompanion(
-                  title: drift.Value(item['title']!),
-                  feedUrl: drift.Value(feed.feedUrl),
-                  link: drift.Value(item['link']!),
-                  description: drift.Value(item['description']!),
-                  content: drift.Value(item['content']!),
-                  enclosure: drift.Value(item['enclosure']!),
-                  author: drift.Value(item['author']!),
-                  date: drift.Value(item['date']!),
-                ),
-              );
-            } else {
-              await _db
-                  .into(_db.articles)
-                  .insert(
-                ArticlesCompanion(
-                  guid: drift.Value(item['guid']!),
-                  title: drift.Value(item['title']!),
-                  feedUrl: drift.Value(feed.feedUrl),
-                  link: drift.Value(item['link']!),
-                  description: drift.Value(item['description']!),
-                  content: drift.Value(item['content']!),
-                  enclosure: drift.Value(item['enclosure']!),
-                  author: drift.Value(item['author']!),
-                  date: drift.Value(item['date']!),
-                  status: const drift.Value('2'),
-                ),
-              );
-            }
+          if (parsedArticles.isNotEmpty) {
+            await _db.batch((batch) {
+              for (var item in parsedArticles) {
+                batch.insert(
+                  _db.articles,
+                  ArticlesCompanion(
+                    guid: drift.Value(item['guid']!),
+                    title: drift.Value(item['title']!),
+                    feedUrl: drift.Value(feed.feedUrl),
+                    link: drift.Value(item['link']!),
+                    description: drift.Value(item['description']!),
+                    content: drift.Value(item['content']!),
+                    enclosure: drift.Value(item['enclosure']!),
+                    author: drift.Value(item['author']!),
+                    date: drift.Value(item['date']!),
+                  ),
+                  mode: drift.InsertMode.insertOrReplace,
+                );
+              }
+            });
           }
 
           final nowTimestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
@@ -210,10 +192,7 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
               shape: const Border(),
               backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
               collapsedBackgroundColor: Theme.of(context).colorScheme.surface,
-              title: Text(
-                categoryName,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
+              title: Text(categoryName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               trailing: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
@@ -244,25 +223,22 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
                       color: Colors.white,
                       border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(20),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
+                        BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 4, offset: const Offset(0, 2)),
                       ],
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: feed.iconUrl.isNotEmpty
                           ? CachedNetworkImage(
-                        imageUrl: feed.iconUrl,
-                        fit: BoxFit.contain,
-                        placeholder: (context, url) => const Padding(
-                          padding: EdgeInsets.all(4.0),
-                          child: CircularProgressIndicator(strokeWidth: 1.5),
-                        ),
-                        errorWidget: (context, url, error) => Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
-                      )
+                              imageUrl: feed.iconUrl,
+                              fit: BoxFit.contain,
+                              placeholder: (context, url) => const Padding(
+                                padding: EdgeInsets.all(4.0),
+                                child: CircularProgressIndicator(strokeWidth: 1.5),
+                              ),
+                              errorWidget: (context, url, error) =>
+                                  Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
+                            )
                           : Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
                     ),
                   ),
@@ -290,10 +266,7 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
                   onTap: () async {
                     await Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => ArticleListScreen(
-                          feed: feed,
-                          initialFeedType: widget.feedType,
-                        ),
+                        builder: (context) => ArticleListScreen(feed: feed, initialFeedType: widget.feedType),
                       ),
                     );
                     _loadDatabaseData();
