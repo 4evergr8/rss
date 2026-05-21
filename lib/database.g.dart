@@ -24,7 +24,8 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   @override
   List<GeneratedColumn> get $columns => [key, value];
@@ -53,8 +54,6 @@ class $SettingsTable extends Settings with TableInfo<$SettingsTable, Setting> {
         _valueMeta,
         value.isAcceptableOrUnknown(data['value']!, _valueMeta),
       );
-    } else if (isInserting) {
-      context.missing(_valueMeta);
     }
     return context;
   }
@@ -154,10 +153,9 @@ class SettingsCompanion extends UpdateCompanion<Setting> {
   });
   SettingsCompanion.insert({
     required String key,
-    required String value,
+    this.value = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : key = Value(key),
-       value = Value(value);
+  }) : key = Value(key);
   static Insertable<Setting> custom({
     Expression<String>? key,
     Expression<String>? value,
@@ -233,7 +231,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _titleMeta = const VerificationMeta('title');
   @override
@@ -242,7 +241,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _categoryMeta = const VerificationMeta(
     'category',
@@ -253,7 +253,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _iconUrlMeta = const VerificationMeta(
     'iconUrl',
@@ -264,7 +265,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _lastUpdatedMeta = const VerificationMeta(
     'lastUpdated',
@@ -275,7 +277,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('0'),
   );
   static const VerificationMeta _displayModeMeta = const VerificationMeta(
     'displayMode',
@@ -286,7 +289,8 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -323,32 +327,24 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
         _siteUrlMeta,
         siteUrl.isAcceptableOrUnknown(data['site_url']!, _siteUrlMeta),
       );
-    } else if (isInserting) {
-      context.missing(_siteUrlMeta);
     }
     if (data.containsKey('title')) {
       context.handle(
         _titleMeta,
         title.isAcceptableOrUnknown(data['title']!, _titleMeta),
       );
-    } else if (isInserting) {
-      context.missing(_titleMeta);
     }
     if (data.containsKey('category')) {
       context.handle(
         _categoryMeta,
         category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
       );
-    } else if (isInserting) {
-      context.missing(_categoryMeta);
     }
     if (data.containsKey('icon_url')) {
       context.handle(
         _iconUrlMeta,
         iconUrl.isAcceptableOrUnknown(data['icon_url']!, _iconUrlMeta),
       );
-    } else if (isInserting) {
-      context.missing(_iconUrlMeta);
     }
     if (data.containsKey('last_updated')) {
       context.handle(
@@ -358,8 +354,6 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
           _lastUpdatedMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_lastUpdatedMeta);
     }
     if (data.containsKey('display_mode')) {
       context.handle(
@@ -369,8 +363,6 @@ class $FeedsTable extends Feeds with TableInfo<$FeedsTable, Feed> {
           _displayModeMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_displayModeMeta);
     }
     return context;
   }
@@ -580,20 +572,14 @@ class FeedsCompanion extends UpdateCompanion<Feed> {
   });
   FeedsCompanion.insert({
     required String feedUrl,
-    required String siteUrl,
-    required String title,
-    required String category,
-    required String iconUrl,
-    required String lastUpdated,
-    required String displayMode,
+    this.siteUrl = const Value.absent(),
+    this.title = const Value.absent(),
+    this.category = const Value.absent(),
+    this.iconUrl = const Value.absent(),
+    this.lastUpdated = const Value.absent(),
+    this.displayMode = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : feedUrl = Value(feedUrl),
-       siteUrl = Value(siteUrl),
-       title = Value(title),
-       category = Value(category),
-       iconUrl = Value(iconUrl),
-       lastUpdated = Value(lastUpdated),
-       displayMode = Value(displayMode);
+  }) : feedUrl = Value(feedUrl);
   static Insertable<Feed> custom({
     Expression<String>? feedUrl,
     Expression<String>? siteUrl,
@@ -705,7 +691,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _feedUrlMeta = const VerificationMeta(
     'feedUrl',
@@ -716,7 +703,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _linkMeta = const VerificationMeta('link');
   @override
@@ -725,7 +713,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _descriptionMeta = const VerificationMeta(
     'description',
@@ -736,7 +725,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _contentMeta = const VerificationMeta(
     'content',
@@ -747,7 +737,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _enclosureMeta = const VerificationMeta(
     'enclosure',
@@ -758,7 +749,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _authorMeta = const VerificationMeta('author');
   @override
@@ -767,7 +759,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
@@ -776,7 +769,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
@@ -785,7 +779,8 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -825,24 +820,18 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
         _titleMeta,
         title.isAcceptableOrUnknown(data['title']!, _titleMeta),
       );
-    } else if (isInserting) {
-      context.missing(_titleMeta);
     }
     if (data.containsKey('feed_url')) {
       context.handle(
         _feedUrlMeta,
         feedUrl.isAcceptableOrUnknown(data['feed_url']!, _feedUrlMeta),
       );
-    } else if (isInserting) {
-      context.missing(_feedUrlMeta);
     }
     if (data.containsKey('link')) {
       context.handle(
         _linkMeta,
         link.isAcceptableOrUnknown(data['link']!, _linkMeta),
       );
-    } else if (isInserting) {
-      context.missing(_linkMeta);
     }
     if (data.containsKey('description')) {
       context.handle(
@@ -852,48 +841,36 @@ class $ArticlesTable extends Articles with TableInfo<$ArticlesTable, Article> {
           _descriptionMeta,
         ),
       );
-    } else if (isInserting) {
-      context.missing(_descriptionMeta);
     }
     if (data.containsKey('content')) {
       context.handle(
         _contentMeta,
         content.isAcceptableOrUnknown(data['content']!, _contentMeta),
       );
-    } else if (isInserting) {
-      context.missing(_contentMeta);
     }
     if (data.containsKey('enclosure')) {
       context.handle(
         _enclosureMeta,
         enclosure.isAcceptableOrUnknown(data['enclosure']!, _enclosureMeta),
       );
-    } else if (isInserting) {
-      context.missing(_enclosureMeta);
     }
     if (data.containsKey('author')) {
       context.handle(
         _authorMeta,
         author.isAcceptableOrUnknown(data['author']!, _authorMeta),
       );
-    } else if (isInserting) {
-      context.missing(_authorMeta);
     }
     if (data.containsKey('date')) {
       context.handle(
         _dateMeta,
         date.isAcceptableOrUnknown(data['date']!, _dateMeta),
       );
-    } else if (isInserting) {
-      context.missing(_dateMeta);
     }
     if (data.containsKey('status')) {
       context.handle(
         _statusMeta,
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
-    } else if (isInserting) {
-      context.missing(_statusMeta);
     }
     return context;
   }
@@ -1155,26 +1132,17 @@ class ArticlesCompanion extends UpdateCompanion<Article> {
   });
   ArticlesCompanion.insert({
     required String guid,
-    required String title,
-    required String feedUrl,
-    required String link,
-    required String description,
-    required String content,
-    required String enclosure,
-    required String author,
-    required String date,
-    required String status,
+    this.title = const Value.absent(),
+    this.feedUrl = const Value.absent(),
+    this.link = const Value.absent(),
+    this.description = const Value.absent(),
+    this.content = const Value.absent(),
+    this.enclosure = const Value.absent(),
+    this.author = const Value.absent(),
+    this.date = const Value.absent(),
+    this.status = const Value.absent(),
     this.rowid = const Value.absent(),
-  }) : guid = Value(guid),
-       title = Value(title),
-       feedUrl = Value(feedUrl),
-       link = Value(link),
-       description = Value(description),
-       content = Value(content),
-       enclosure = Value(enclosure),
-       author = Value(author),
-       date = Value(date),
-       status = Value(status);
+  }) : guid = Value(guid);
   static Insertable<Article> custom({
     Expression<String>? guid,
     Expression<String>? title,
@@ -1309,7 +1277,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 typedef $$SettingsTableCreateCompanionBuilder =
     SettingsCompanion Function({
       required String key,
-      required String value,
+      Value<String> value,
       Value<int> rowid,
     });
 typedef $$SettingsTableUpdateCompanionBuilder =
@@ -1410,7 +1378,7 @@ class $$SettingsTableTableManager
           createCompanionCallback:
               ({
                 required String key,
-                required String value,
+                Value<String> value = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => SettingsCompanion.insert(
                 key: key,
@@ -1442,12 +1410,12 @@ typedef $$SettingsTableProcessedTableManager =
 typedef $$FeedsTableCreateCompanionBuilder =
     FeedsCompanion Function({
       required String feedUrl,
-      required String siteUrl,
-      required String title,
-      required String category,
-      required String iconUrl,
-      required String lastUpdated,
-      required String displayMode,
+      Value<String> siteUrl,
+      Value<String> title,
+      Value<String> category,
+      Value<String> iconUrl,
+      Value<String> lastUpdated,
+      Value<String> displayMode,
       Value<int> rowid,
     });
 typedef $$FeedsTableUpdateCompanionBuilder =
@@ -1635,12 +1603,12 @@ class $$FeedsTableTableManager
           createCompanionCallback:
               ({
                 required String feedUrl,
-                required String siteUrl,
-                required String title,
-                required String category,
-                required String iconUrl,
-                required String lastUpdated,
-                required String displayMode,
+                Value<String> siteUrl = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> iconUrl = const Value.absent(),
+                Value<String> lastUpdated = const Value.absent(),
+                Value<String> displayMode = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => FeedsCompanion.insert(
                 feedUrl: feedUrl,
@@ -1677,15 +1645,15 @@ typedef $$FeedsTableProcessedTableManager =
 typedef $$ArticlesTableCreateCompanionBuilder =
     ArticlesCompanion Function({
       required String guid,
-      required String title,
-      required String feedUrl,
-      required String link,
-      required String description,
-      required String content,
-      required String enclosure,
-      required String author,
-      required String date,
-      required String status,
+      Value<String> title,
+      Value<String> feedUrl,
+      Value<String> link,
+      Value<String> description,
+      Value<String> content,
+      Value<String> enclosure,
+      Value<String> author,
+      Value<String> date,
+      Value<String> status,
       Value<int> rowid,
     });
 typedef $$ArticlesTableUpdateCompanionBuilder =
@@ -1920,15 +1888,15 @@ class $$ArticlesTableTableManager
           createCompanionCallback:
               ({
                 required String guid,
-                required String title,
-                required String feedUrl,
-                required String link,
-                required String description,
-                required String content,
-                required String enclosure,
-                required String author,
-                required String date,
-                required String status,
+                Value<String> title = const Value.absent(),
+                Value<String> feedUrl = const Value.absent(),
+                Value<String> link = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> content = const Value.absent(),
+                Value<String> enclosure = const Value.absent(),
+                Value<String> author = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ArticlesCompanion.insert(
                 guid: guid,
