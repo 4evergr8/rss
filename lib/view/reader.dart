@@ -20,18 +20,37 @@ class ReaderScreen extends StatefulWidget {
 class _ReaderScreenState extends State<ReaderScreen> {
   late int _currentIndex;
   final ScrollController _scrollController = ScrollController();
+  double _readingProgress = 0.0; // 记录阅读进度
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    _scrollController.addListener(_scrollListener); // 监听滚动事件
     _markAsRead(_currentIndex);
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_scrollListener);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // 计算滚动进度
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+
+    setState(() {
+      if (maxScroll <= 0) {
+        _readingProgress = 0.0;
+      } else {
+        // 限制进度范围在 0.0 到 1.0 之间
+        _readingProgress = (currentScroll / maxScroll).clamp(0.0, 1.0);
+      }
+    });
   }
 
   Future<void> _markAsRead(int index) async {
@@ -77,6 +96,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     if (newIndex >= 0 && newIndex < widget.allArticles.length) {
       setState(() {
         _currentIndex = newIndex;
+        _readingProgress = 0.0; // 切换文章时重置进度条
       });
       _scrollController.jumpTo(0);
       _markAsRead(newIndex);
@@ -97,7 +117,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   String _formatTimestamp(String timestampStr) {
     try {
       final seconds = int.parse(timestampStr);
-      final date = DateTime.fromMillisecondsSinceEpoch(seconds);
+      final date = DateTime.fromMillisecondsSinceEpoch(seconds); // 戳通常是秒，修正为毫秒映射
       return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     } catch (_) {
       return timestampStr;
@@ -129,6 +149,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
+        ),
+        // 在 AppBar 底部放置进度条
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(2.0),
+          child: LinearProgressIndicator(
+            value: _readingProgress,
+            backgroundColor: Colors.transparent,
+            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+            minHeight: 2.0,
+          ),
         ),
       ),
       body: SingleChildScrollView(
