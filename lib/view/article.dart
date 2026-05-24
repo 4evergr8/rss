@@ -180,7 +180,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                   height: MediaQuery.of(context).size.height * 0.7,
                   child: Center(
                     child: Text(
-                      '当前分类下没有文章\n可点击右上角按钮触发同步刷新',
+                      '当前分类下没有文章\n下拉可以触发同步刷新',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: colorScheme.primary.withAlpha(160), // 使用主题色并带有适度透明度以符合提示语视觉
@@ -238,7 +238,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                             height: 1.3,
                                             color: isUnread
                                                 ? colorScheme.onSurface
-                                                : colorScheme.onSurface.withOpacity(0.45),
+                                                : colorScheme.onSurface.withValues(alpha: 0.45),
                                           ),
                                         ),
                                         const SizedBox(height: 6),
@@ -251,7 +251,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                             height: 1.35,
                                             color: isUnread
                                                 ? colorScheme.onSurfaceVariant
-                                                : colorScheme.onSurfaceVariant.withOpacity(0.45),
+                                                : colorScheme.onSurface.withValues(alpha: 0.45)
                                           ),
                                         ),
                                       ],
@@ -272,7 +272,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                           placeholder: (context, url) => Container(
                                             width: imageWidth,
                                             height: imageHeight,
-                                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                            color: colorScheme.surfaceContainerHighest.withValues(alpha:0.3),
                                             alignment: Alignment.center,
                                             child: const SizedBox(
                                               width: 16,
@@ -283,7 +283,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                           errorWidget: (context, url, error) => Container(
                                             width: imageWidth,
                                             height: imageHeight,
-                                            color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                                            color: colorScheme.surfaceContainerHighest.withValues(alpha:0.3),
                                             alignment: Alignment.center,
                                             child: Icon(Icons.broken_image, size: 20, color: colorScheme.outline),
                                           ),
@@ -304,7 +304,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: colorScheme.outline.withOpacity(isUnread ? 1.0 : 0.6),
+                                        color: colorScheme.outline.withValues(alpha:isUnread ? 1.0 : 0.6),
                                       ),
                                     ),
                                   ),
@@ -320,7 +320,7 @@ class _ArticleListScreenState extends State<ArticleListScreen> {
                                         dateText,
                                         style: TextStyle(
                                           fontSize: 11,
-                                          color: colorScheme.outline.withOpacity(isUnread ? 1.0 : 0.6),
+                                          color: colorScheme.outline.withValues(alpha:isUnread ? 1.0 : 0.6),
                                         ),
                                       ),
                                     ],
