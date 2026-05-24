@@ -27,6 +27,10 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
   // 静态变量：生命周期随进程，完全杀死启动时为 true，软件内切换重建时保持 false
   static bool _isAppColdLaunched = true;
 
+  // 进度条状态控制变量
+  String _currentRefreshingTitle = '';
+  String _refreshProgress = '';
+
   @override
   void initState() {
     super.initState();
@@ -106,7 +110,17 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
       final sortedFeeds = List<Feed>.from(allFeeds);
       sortedFeeds.sort((a, b) => a.lastUpdated.compareTo(b.lastUpdated));
 
-      for (var feed in sortedFeeds) {
+      final int totalCount = sortedFeeds.length;
+
+      for (int i = 0; i < totalCount; i++) {
+        final feed = sortedFeeds[i];
+
+        // 实时更新当前正在刷新的订阅源信息及进度
+        setState(() {
+          _currentRefreshingTitle = feed.title;
+          _refreshProgress = '${i + 1}/$totalCount';
+        });
+
         try {
           final xmlText = await downloadXmlFromServer(feed.feedUrl);
 
@@ -157,6 +171,11 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
     } catch (e) {
       showErrorSnackBarGlobal('刷新队列发生致命异常: $e');
     } finally {
+      // 刷新结束，重置进度显示状态
+      setState(() {
+        _currentRefreshingTitle = '';
+        _refreshProgress = '';
+      });
       cancelLoading();
     }
   }
@@ -167,132 +186,180 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_groupedFeeds.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: _refreshAllFeeds,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: Center(
+    // 抽出公共的进度提示挂件
+    Widget? progressBanner;
+    if (_currentRefreshingTitle.isNotEmpty) {
+      progressBanner = Container(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: 12),
+            Expanded(
               child: Text(
-                '没有匹配的订阅源\n下拉可以触发同步刷新',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Theme.of(context).colorScheme.primary, height: 1.5),
+                '正在刷新: $_currentRefreshingTitle',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onPrimaryContainer),
               ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Text(
+              _refreshProgress,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ],
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _refreshAllFeeds,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: _groupedFeeds.keys.length,
-        itemBuilder: (context, groupIndex) {
-          final categoryName = _groupedFeeds.keys.elementAt(groupIndex);
-          final feedsInGroup = _groupedFeeds[categoryName] ?? [];
-
-          return Card(
-            margin: const EdgeInsets.symmetric(vertical: 6),
-            elevation: 1,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            clipBehavior: Clip.antiAlias,
-            child: ExpansionTile(
-              shape: const Border(),
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-              collapsedBackgroundColor: Theme.of(context).colorScheme.surface,
-              title: Text(categoryName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              trailing: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${feedsInGroup.length}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
+    if (_groupedFeeds.isEmpty) {
+      return Column(
+        children: [
+          if (progressBanner != null) progressBanner,
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _refreshAllFeeds,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.7,
+                  child: Center(
+                    child: Text(
+                      '没有匹配的订阅源\n下拉可以触发同步刷新',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary, height: 1.5),
+                    ),
                   ),
                 ),
               ),
-              initiallyExpanded: true,
-              children: feedsInGroup.map((feed) {
-                final count = _unreadCounts[feed.feedUrl] ?? 0;
-
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  leading: Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.shadow.withAlpha(20),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: feed.iconUrl.isNotEmpty
-                          ? CachedNetworkImage(
-                              imageUrl: feed.iconUrl,
-                              fit: BoxFit.contain,
-                              placeholder: (context, url) => const Padding(
-                                padding: EdgeInsets.all(4.0),
-                                child: CircularProgressIndicator(strokeWidth: 1.5),
-                              ),
-                              errorWidget: (context, url, error) =>
-                                  Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
-                            )
-                          : Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
-                    ),
-                  ),
-                  title: Text(
-                    feed.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                  ),
-                  trailing: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: count > 0 ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: count > 0 ? Theme.of(context).colorScheme.onPrimaryContainer : Colors.grey.shade400,
-                      ),
-                    ),
-                  ),
-                  onTap: () async {
-                    await Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => ArticleListScreen(feed: feed, initialFeedType: widget.feedType),
-                      ),
-                    );
-                    _loadDatabaseData();
-                  },
-                );
-              }).toList(),
             ),
-          );
-        },
-      ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        if (progressBanner != null) progressBanner,
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refreshAllFeeds,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              itemCount: _groupedFeeds.keys.length,
+              itemBuilder: (context, groupIndex) {
+                final categoryName = _groupedFeeds.keys.elementAt(groupIndex);
+                final feedsInGroup = _groupedFeeds[categoryName] ?? [];
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 6),
+                  elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  clipBehavior: Clip.antiAlias,
+                  child: ExpansionTile(
+                    shape: const Border(),
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+                    collapsedBackgroundColor: Theme.of(context).colorScheme.surface,
+                    title: Text(categoryName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withAlpha(25),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${feedsInGroup.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    initiallyExpanded: true,
+                    children: feedsInGroup.map((feed) {
+                      final count = _unreadCounts[feed.feedUrl] ?? 0;
+
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        leading: Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Theme.of(context).colorScheme.surface,
+                            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).colorScheme.shadow.withAlpha(20),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: feed.iconUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: feed.iconUrl,
+                                    fit: BoxFit.contain,
+                                    placeholder: (context, url) => const Padding(
+                                      padding: EdgeInsets.all(4.0),
+                                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                                    ),
+                                    errorWidget: (context, url, error) =>
+                                        Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
+                                  )
+                                : Icon(Icons.rss_feed, size: 18, color: Theme.of(context).colorScheme.primary),
+                          ),
+                        ),
+                        title: Text(
+                          feed.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: count > 0 ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '$count',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: count > 0
+                                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                                  : Colors.grey.shade400,
+                            ),
+                          ),
+                        ),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ArticleListScreen(feed: feed, initialFeedType: widget.feedType),
+                            ),
+                          );
+                          _loadDatabaseData();
+                        },
+                      );
+                    }).toList(),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
