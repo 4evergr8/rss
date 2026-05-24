@@ -24,10 +24,21 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
   Map<String, int> _unreadCounts = {};
   bool _isLoadingData = true;
 
+  // 静态变量：生命周期随进程，完全杀死启动时为 true，软件内切换重建时保持 false
+  static bool _isAppColdLaunched = true;
+
   @override
   void initState() {
     super.initState();
     _loadDatabaseData();
+
+    // 识别冷启动：只有完全杀死后第一次进入才会执行
+    if (_isAppColdLaunched) {
+      _isAppColdLaunched = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _refreshAllFeeds();
+      });
+    }
   }
 
   Future<void> _loadDatabaseData() async {
