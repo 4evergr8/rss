@@ -147,11 +147,12 @@ class _RssFeedScreenState extends State<RssFeedScreen> {
             ),
           );
         } catch (singleError) {
-          showErrorSnackBarGlobal('更新订阅源 [${feed.title}] 失败，已跳过: $singleError');
-          continue;
+          showErrorSnackBarGlobal('更新订阅源 [${feed.title}] 失败，已终止后续刷新: $singleError');
+          break;
         }
       }
 
+      // 哪怕中途有源失败退出了，依然把前面已经成功更新的数据加载到 UI 上
       await _loadDatabaseData();
     } catch (e) {
       showErrorSnackBarGlobal('刷新队列发生致命异常: $e');
