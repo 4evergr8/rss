@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -68,10 +69,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
 
   Future<void> _importOpmlFile() async {
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['opml', 'xml'],
-      );
+      final result = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['opml', 'xml']);
 
       if (result == null || result.files.single.path == null) {
         return;
@@ -100,11 +98,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
 
         await _db.batch((batch) {
           for (final feed in feedsToInsert) {
-            batch.insert(
-              _db.feeds,
-              feed,
-              mode: drift.InsertMode.insertOrReplace,
-            );
+            batch.insert(_db.feeds, feed, mode: drift.InsertMode.insertOrReplace);
           }
         });
 
@@ -132,9 +126,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
         final titleAttr = node.getAttribute('title')?.trim();
         final htmlUrl = node.getAttribute('htmlUrl')?.trim() ?? '';
 
-        final String displayName = (textAttr != null && textAttr.isNotEmpty)
-            ? textAttr
-            : (titleAttr ?? '未命名订阅源');
+        final String displayName = (textAttr != null && textAttr.isNotEmpty) ? textAttr : (titleAttr ?? '未命名订阅源');
 
         if (xmlUrl != null && xmlUrl.isNotEmpty) {
           resultList.add(
@@ -159,9 +151,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
 
   Future<void> _importSqliteFile() async {
     try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.any,
-      );
+      final result = await FilePicker.pickFiles(type: FileType.any);
 
       if (result == null || result.files.single.path == null) {
         return;
@@ -173,10 +163,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
           title: const Text('确认覆盖数据库'),
           content: const Text('导入外部数据库将完全覆盖并替换当前的所有订阅数据，此操作不可逆。是否继续？'),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('取消'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
               child: const Text('确认覆盖', style: TextStyle(color: Colors.red)),
@@ -221,16 +208,16 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
       await _db
           .into(_db.feeds)
           .insertOnConflictUpdate(
-        FeedsCompanion(
-          feedUrl: drift.Value(_urlController.text.trim()),
-          siteUrl: drift.Value(_siteUrlController.text.trim()),
-          title: drift.Value(_titleController.text.trim()),
-          category: drift.Value(_categoryController.text.trim()),
-          iconUrl: drift.Value(_iconUrlController.text.trim()),
-          lastUpdated: const drift.Value('0'),
-          displayMode: drift.Value(_selectedDisplayMode),
-        ),
-      );
+            FeedsCompanion(
+              feedUrl: drift.Value(_urlController.text.trim()),
+              siteUrl: drift.Value(_siteUrlController.text.trim()),
+              title: drift.Value(_titleController.text.trim()),
+              category: drift.Value(_categoryController.text.trim()),
+              iconUrl: drift.Value(_iconUrlController.text.trim()),
+              lastUpdated: const drift.Value('0'),
+              displayMode: drift.Value(_selectedDisplayMode),
+            ),
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('订阅保存成功！')));
@@ -375,11 +362,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                     children: [
                       Text(
                         '订阅源配置',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                       ),
                       const SizedBox(height: 16),
                       TextField(
