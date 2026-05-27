@@ -29,6 +29,9 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
   final TextEditingController _categoryController = TextEditingController(text: '');
   final TextEditingController _iconUrlController = TextEditingController();
 
+  // 新增：编辑区域专用的订阅链接文本控制器
+  final TextEditingController _editFeedUrlController = TextEditingController();
+
   bool _hasLoaded = false;
   String _selectedDisplayMode = 'content';
 
@@ -54,10 +57,15 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
       final xmlText = await downloadXmlFromServer(inputUrl);
       final parsedData = parseRss(xmlText);
 
+      // 提取解析出的 feedUrl
+      final String parsedFeedUrl = parsedData['feedUrl'] ?? '';
+
       setState(() {
         _titleController.text = parsedData['title'] ?? '';
         _siteUrlController.text = parsedData['siteUrl'] ?? '';
         _iconUrlController.text = parsedData['iconUrl'] ?? '';
+        // 如果返回结果中包含有效的 feedUrl 则使用它，否则使用用户最初输入的链接兜底
+        _editFeedUrlController.text = parsedFeedUrl.isNotEmpty ? parsedFeedUrl : inputUrl;
         _hasLoaded = true;
       });
     } catch (error) {
@@ -209,7 +217,8 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
           .into(_db.feeds)
           .insertOnConflictUpdate(
             FeedsCompanion(
-              feedUrl: drift.Value(_urlController.text.trim()),
+              // 注意：此处保存时，主键 feedUrl 使用编辑区域经过修改或兜底的 _editFeedUrlController
+              feedUrl: drift.Value(_editFeedUrlController.text.trim()),
               siteUrl: drift.Value(_siteUrlController.text.trim()),
               title: drift.Value(_titleController.text.trim()),
               category: drift.Value(_categoryController.text.trim()),
@@ -237,6 +246,7 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
     _siteUrlController.dispose();
     _categoryController.dispose();
     _iconUrlController.dispose();
+    _editFeedUrlController.dispose(); // 妥善释放新控制器
     super.dispose();
   }
 
@@ -363,6 +373,13 @@ class _AddFeedScreenState extends State<AddFeedScreen> {
                       Text(
                         '订阅源配置',
                         style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                      ),
+                      const SizedBox(height: 16),
+                      // 新增：编辑最终订阅链接的 TextField，支持自定义修改
+                      TextField(
+                        controller: _editFeedUrlController,
+                        maxLines: null,
+                        decoration: customInputDecoration('订阅链接', Icons.rss_feed),
                       ),
                       const SizedBox(height: 16),
                       TextField(
